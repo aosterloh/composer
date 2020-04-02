@@ -1,5 +1,5 @@
 """
-### Example Data Pipeline for Bayer
+### Example Data Pipeline triggering Dataprep job, writing result to BigQuery and then running aggregation SQL job
 ### based on https://cloud.google.com/blog/products/data-analytics/how-to-orchestrate-cloud-dataprep-jobs-using-cloud-composer
 """
 
