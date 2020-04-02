@@ -34,7 +34,7 @@ def check_dataprep_run_complete(response):
   return response.json()['status'] == 'Complete'
 
 with airflow.DAG(
-        'bayer-data-pipeline_v4.1',
+        'dataprep_bq_automation',
         default_args=default_args,
         # Not scheduled, trigger only
         schedule_interval=None,
