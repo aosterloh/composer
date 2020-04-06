@@ -1,12 +1,7 @@
-"""
-### Example Data Pipeline triggering Dataprep job, writing result to BigQuery and then running aggregation SQL job
-### based on https://cloud.google.com/blog/products/data-analytics/how-to-orchestrate-cloud-dataprep-jobs-using-cloud-composer
-"""
-
 import airflow
 from airflow.operators import SimpleHttpOperator, HttpSensor
 from airflow.models import Variable
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.contrib.operators.bigquery_operator import BigQueryOperator
 from datetime import datetime, timedelta
 import json
 
@@ -34,7 +29,7 @@ def check_dataprep_run_complete(response):
   return response.json()['status'] == 'Complete'
 
 with airflow.DAG(
-        'dataprep_bq_automation',
+        'bayer-data-pipeline_v4.2',
         default_args=default_args,
         # Not scheduled, trigger only
         schedule_interval=None,
@@ -43,8 +38,6 @@ with airflow.DAG(
         }
 ) as dag:
 
-# recipe id = 1339729
-# example URL https://clouddataprep.com/flows/250119?recipe=1339729&tab=recipe&projectId=thatistoomuchdata
   run_dataprep_task = SimpleHttpOperator(
     task_id='run_dataprep_job',
     endpoint='/v4/jobGroups',
@@ -71,19 +64,22 @@ bigquery_run_sql = BigQueryOperator(
     bql='''
     #standardsql
     SELECT
-      BPQ150A,
-      AVG(bPXPLS) AS avg_BPXPLS,
-      AVG(bpxsy2) AS avg_BPXSY2
+      stories.score AS stories_score,
+      COUNT(stories.id) AS stories_count
     FROM
-      `thatistoomuchdata.dataprep_output.BPX_E_XPT_cleaned`
+      `bigquery-public-data.hacker_news.stories` AS stories
     WHERE
-      BPXSY2 > 0
+      NOT (stories.score IS NULL)
     GROUP BY
-      BPQ150A
+      1
+    ORDER BY
+      1
+    LIMIT
+      500
     ''',
-    destination_dataset_table='thatistoomuchdata.dataprep_output.daily_aggregate${{ yesterday_ds_nodash }}',
-    dag=dag)
+    destination_dataset_table='<YOUR PROJECT>.<YOUR DATASET.story_count',
+    dag=dag,
+    )
 
-
-
+#Sequence of run
 run_dataprep_task >> wait_for_dataprep_job_to_complete >> bigquery_run_sql
